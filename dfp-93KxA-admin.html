@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>DF Plus Admin</title>
+<title>DF Plus Admin CSV</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body{font-family:Arial;background:#f1f5f9;padding:20px}
@@ -19,10 +19,8 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 .actions button{margin-right:4px;width:auto;padding:6px 10px}
 </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
 <div id="lbox" class="card">
 <h2>🔐 Admin Login</h2>
 <input id="u" placeholder="Username">
@@ -31,17 +29,15 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 <p id="e" style="color:red"></p>
 </div>
 
-<!-- ADMIN -->
 <div id="abox" class="hidden">
 <button class="dark" onclick="out()">Logout</button>
 
 <div class="card">
 <h3 id="formTitle">Add Product</h3>
-
 <input id="n" placeholder="Product Name">
 <select id="c">
-  <option value="computer">Computer</option>
-  <option value="phone">Phone</option>
+<option value="computer">Computer</option>
+<option value="phone">Phone</option>
 </select>
 <input id="b" placeholder="Brand">
 <input id="pr" type="number" placeholder="Price">
@@ -50,6 +46,7 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 
 <button id="saveBtn" class="ok" onclick="add()">Save Product</button>
 <button id="cancelBtn" class="warn hidden" onclick="cancelEdit()">Cancel Edit</button>
+<button class="dark" onclick="downloadCSV()">Download CSV</button>
 </div>
 
 <div class="card">
@@ -57,9 +54,7 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 <table>
 <thead>
 <tr>
-  <th>Name</th>
-  <th>₦</th>
-  <th>Actions</th>
+<th>ID</th><th>Name</th><th>₦</th><th>Actions</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -68,10 +63,8 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 </div>
 
 <script>
-/* ===== AUTH ===== */
 const _U="admin";
-/* 🔴 KEEP YOUR HASH */
-const _H="PASTE_HASH_HERE";
+const _H="PASTE_HASH_HERE"; // hashed password
 
 async function _h(t){
  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));
@@ -79,68 +72,68 @@ async function _h(t){
 }
 
 async function auth(){
- if(u.value!==_U)return e.innerText="Invalid login";
+ if(u.value!==_U) return e.innerText="Invalid login";
  if(await _h(p.value)===_H){
-  localStorage.setItem("_dfp","1");
-  show();
+   show();
+   loadProducts();
  } else e.innerText="Invalid login";
 }
 
-function out(){localStorage.removeItem("_dfp");location.reload();}
-function show(){lbox.classList.add("hidden");abox.classList.remove("hidden");draw();}
-if(localStorage.getItem("_dfp")==="1")show();
+function out(){location.reload();}
+function show(){lbox.classList.add("hidden");abox.classList.remove("hidden");}
 
-/* ===== PRODUCTS ===== */
-let P = JSON.parse(localStorage.getItem("products")) || [];
-let editIndex = null;
+let P=[];
+let editIndex=null;
 
-function save(){
- localStorage.setItem("products",JSON.stringify(P));
- draw();
+/* ===== PRODUCT CRUD ===== */
+function loadProducts(){
+ fetch("products.csv")
+ .then(r=>r.text())
+ .then(data=>{
+   const rows=data.trim().split("\n").slice(1);
+   P = rows.map((r,i)=>{
+     const [id,name,category,brand,price,discount,image]=r.split(",");
+     return {id,name,category,brand,price:Number(price),discount:Number(discount),image};
+   });
+   draw();
+ });
+}
+
+function draw(){
+ list.innerHTML="";
+ P.forEach((x,i)=>{
+  list.innerHTML+=`
+  <tr>
+   <td>${x.id}</td>
+   <td>${x.name}</td>
+   <td>${x.discount||x.price}</td>
+   <td class="actions">
+    <button class="warn" onclick="edit(${i})">Edit</button>
+    <button class="bad" onclick="del(${i})">Delete</button>
+   </td>
+  </tr>`;
+ });
 }
 
 function add(){
  if(!n.value || !pr.value) return alert("Missing fields");
-
- if(editIndex === null){
-  P.push(getFormData());
+ if(editIndex===null){
+   const id = P.length ? Math.max(...P.map(p=>Number(p.id)))+1 : 1;
+   P.push({id,name:n.value,category:c.value,brand:b.value,price:+pr.value,discount:+d.value||0,image:i.value});
  } else {
-  P[editIndex] = getFormData();
+   P[editIndex]={...P[editIndex],name:n.value,category:c.value,brand:b.value,price:+pr.value,discount:+d.value||0,image:i.value};
  }
-
- save();
+ draw();
  resetForm();
-}
-
-function getFormData(){
- return {
-  name:n.value,
-  category:c.value,
-  brand:b.value,
-  price:+pr.value,
-  discount:+d.value||0,
-  image:i.value
- };
 }
 
 function edit(i){
  const x=P[i];
- n.value=x.name;
- c.value=x.category;
- b.value=x.brand;
- pr.value=x.price;
- d.value=x.discount;
- i.value=x.image;
-
- editIndex=i;
- formTitle.innerText="Edit Product";
- saveBtn.innerText="Update Product";
- cancelBtn.classList.remove("hidden");
+ n.value=x.name;c.value=x.category;b.value=x.brand;pr.value=x.price;d.value=x.discount;i.value=x.image;
+ editIndex=i;formTitle.innerText="Edit Product";saveBtn.innerText="Update";cancelBtn.classList.remove("hidden");
 }
 
-function cancelEdit(){
- resetForm();
-}
+function cancelEdit(){resetForm();}
 
 function resetForm(){
  n.value=b.value=pr.value=d.value=i.value="";
@@ -151,26 +144,19 @@ function resetForm(){
  cancelBtn.classList.add("hidden");
 }
 
-function del(i){
- if(confirm("Delete product?")){
-  P.splice(i,1);
-  save();
- }
-}
+function del(i){if(confirm("Delete product?")){P.splice(i,1);draw();}}
 
-function draw(){
- list.innerHTML="";
- P.forEach((x,i)=>{
-  list.innerHTML+=`
-  <tr>
-   <td>${x.name}</td>
-   <td>${x.discount||x.price}</td>
-   <td class="actions">
-    <button class="warn" onclick="edit(${i})">Edit</button>
-    <button class="bad" onclick="del(${i})">Delete</button>
-   </td>
-  </tr>`;
- });
+/* ===== CSV DOWNLOAD ===== */
+function downloadCSV(){
+ if(!P.length){alert("No products to export"); return;}
+ const header="id,name,category,brand,price,discount,image\n";
+ const rows=P.map(p=>`${p.id},${p.name},${p.category},${p.brand},${p.price},${p.discount},${p.image}`).join("\n");
+ const csvContent=header+rows;
+ const blob=new Blob([csvContent],{type:"text/csv"});
+ const a=document.createElement("a");
+ a.href=URL.createObjectURL(blob);
+ a.download="products.csv";
+ a.click();
 }
 </script>
 
