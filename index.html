@@ -93,25 +93,29 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center}
 </div>
 
 <script>
-/* ===== CONFIG ===== */
-const WHATSAPP = "2347060402854"; // your number
+const WHATSAPP = "2347060402854";
 const DELIVERY = 2500;
 
-/* ===== DATA ===== */
 let products = [];
 let cart = [];
 
-/* ===== LOAD PRODUCTS FROM CSV ===== */
-fetch('products.csv')
-.then(r=>r.text())
-.then(data=>{
- const rows = data.trim().split("\n").slice(1);
- products = rows.map(r=>{
-   const [id,name,category,brand,price,discount,image]=r.split(",");
-   return {id,name,category,brand,price:+price,discount:+discount,image};
- });
- render(products);
-});
+/* ===== FETCH CSV ===== */
+async function loadCSV(){
+ try{
+   const r = await fetch("products.csv?_=" + Date.now()); // cache bust
+   const text = await r.text();
+   const rows = text.trim().split("\n").slice(1);
+   products = rows.map(r=>{
+     const [id,name,category,brand,price,discount,image] = r.split(",");
+     return {id,name,category,brand,price:+price,discount:+discount,image};
+   });
+   filterProducts(); // render after load
+ }catch(e){ console.error("CSV load failed", e); }
+}
+
+// Load every 5 seconds
+loadCSV();
+setInterval(loadCSV, 5000);
 
 /* ===== RENDER ===== */
 function render(list){
