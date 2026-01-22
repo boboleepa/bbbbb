@@ -1,3 +1,5 @@
 id,name,category,brand,price,discount,image
-1,Wireless Mouse,computer,Logitech,5000,0,mouse.jpg
-2,Phone Case,phone,Samsung,2500,500,case.jpg
+1,Wireless Mouse,computer,Logitech,5000,0,assets/mouse.jpg
+2,Phone Case,phone,Samsung,2500,500,assets/case.jpg
+3,USB Keyboard,computer,Logitech,4000,0,assets/keyboard.jpg
+4,Charger,phone,Anker,3000,0,assets/charger.jpg
