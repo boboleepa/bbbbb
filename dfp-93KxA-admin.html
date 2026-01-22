@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DF Plus Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{font-family:Arial;background:#f1f5f9;padding:20px}
+.card{background:#fff;padding:20px;border-radius:14px;max-width:460px;margin:40px auto}
+input,select,button{padding:12px;margin:8px 0;width:100%}
+button{border:none;border-radius:10px;cursor:pointer}
+.ok{background:#22c55e;color:#fff}
+.warn{background:#f59e0b;color:#fff}
+.bad{background:#ef4444;color:#fff}
+.dark{background:#0f172a;color:#fff}
+.hidden{display:none}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
+.actions button{margin-right:4px;width:auto;padding:6px 10px}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="lbox" class="card">
+<h2>🔐 Admin Login</h2>
+<input id="u" placeholder="Username">
+<input id="p" type="password" placeholder="Password">
+<button class="ok" onclick="auth()">Login</button>
+<p id="e" style="color:red"></p>
+</div>
+
+<!-- ADMIN -->
+<div id="abox" class="hidden">
+<button class="dark" onclick="out()">Logout</button>
+
+<div class="card">
+<h3 id="formTitle">Add Product</h3>
+
+<input id="n" placeholder="Product Name">
+<select id="c">
+  <option value="computer">Computer</option>
+  <option value="phone">Phone</option>
+</select>
+<input id="b" placeholder="Brand">
+<input id="pr" type="number" placeholder="Price">
+<input id="d" type="number" placeholder="Discount">
+<input id="i" placeholder="Image URL">
+
+<button id="saveBtn" class="ok" onclick="add()">Save Product</button>
+<button id="cancelBtn" class="warn hidden" onclick="cancelEdit()">Cancel Edit</button>
+</div>
+
+<div class="card">
+<h3>Products</h3>
+<table>
+<thead>
+<tr>
+  <th>Name</th>
+  <th>₦</th>
+  <th>Actions</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+</div>
+
+<script>
+/* ===== AUTH ===== */
+const _U="admin";
+/* 🔴 KEEP YOUR HASH */
+const _H="PASTE_HASH_HERE";
+
+async function _h(t){
+ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t));
+ return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");
+}
+
+async function auth(){
+ if(u.value!==_U)return e.innerText="Invalid login";
+ if(await _h(p.value)===_H){
+  localStorage.setItem("_dfp","1");
+  show();
+ } else e.innerText="Invalid login";
+}
+
+function out(){localStorage.removeItem("_dfp");location.reload();}
+function show(){lbox.classList.add("hidden");abox.classList.remove("hidden");draw();}
+if(localStorage.getItem("_dfp")==="1")show();
+
+/* ===== PRODUCTS ===== */
+let P = JSON.parse(localStorage.getItem("products")) || [];
+let editIndex = null;
+
+function save(){
+ localStorage.setItem("products",JSON.stringify(P));
+ draw();
+}
+
+function add(){
+ if(!n.value || !pr.value) return alert("Missing fields");
+
+ if(editIndex === null){
+  P.push(getFormData());
+ } else {
+  P[editIndex] = getFormData();
+ }
+
+ save();
+ resetForm();
+}
+
+function getFormData(){
+ return {
+  name:n.value,
+  category:c.value,
+  brand:b.value,
+  price:+pr.value,
+  discount:+d.value||0,
+  image:i.value
+ };
+}
+
+function edit(i){
+ const x=P[i];
+ n.value=x.name;
+ c.value=x.category;
+ b.value=x.brand;
+ pr.value=x.price;
+ d.value=x.discount;
+ i.value=x.image;
+
+ editIndex=i;
+ formTitle.innerText="Edit Product";
+ saveBtn.innerText="Update Product";
+ cancelBtn.classList.remove("hidden");
+}
+
+function cancelEdit(){
+ resetForm();
+}
+
+function resetForm(){
+ n.value=b.value=pr.value=d.value=i.value="";
+ c.value="computer";
+ editIndex=null;
+ formTitle.innerText="Add Product";
+ saveBtn.innerText="Save Product";
+ cancelBtn.classList.add("hidden");
+}
+
+function del(i){
+ if(confirm("Delete product?")){
+  P.splice(i,1);
+  save();
+ }
+}
+
+function draw(){
+ list.innerHTML="";
+ P.forEach((x,i)=>{
+  list.innerHTML+=`
+  <tr>
+   <td>${x.name}</td>
+   <td>${x.discount||x.price}</td>
+   <td class="actions">
+    <button class="warn" onclick="edit(${i})">Edit</button>
+    <button class="bad" onclick="del(${i})">Delete</button>
+   </td>
+  </tr>`;
+ });
+}
+</script>
+
+</body>
+</html>
