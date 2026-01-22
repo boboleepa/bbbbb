@@ -33,7 +33,7 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 <button class="dark" onclick="out()">Logout</button>
 
 <div class="card">
-<h3 id="formTitle">Add Product</h3>
+<h3 id="formTitle">Add / Edit Product</h3>
 <input id="n" placeholder="Product Name">
 <select id="c">
 <option value="computer">Computer</option>
@@ -47,6 +47,7 @@ th,td{padding:8px;border-bottom:1px solid #e5e7eb;font-size:14px}
 <button id="saveBtn" class="ok" onclick="add()">Save Product</button>
 <button id="cancelBtn" class="warn hidden" onclick="cancelEdit()">Cancel Edit</button>
 <button class="dark" onclick="downloadCSV()">Download CSV</button>
+<input type="file" id="uploadCSV" style="margin-top:8px" onchange="loadCSV(event)">
 </div>
 
 <div class="card">
@@ -75,28 +76,30 @@ async function auth(){
  if(u.value!==_U) return e.innerText="Invalid login";
  if(await _h(p.value)===_H){
    show();
-   loadProducts();
+   loadDefaultCSV();
  } else e.innerText="Invalid login";
 }
 
 function out(){location.reload();}
 function show(){lbox.classList.add("hidden");abox.classList.remove("hidden");}
 
-let P=[];
+let P=[]; 
 let editIndex=null;
 
 /* ===== PRODUCT CRUD ===== */
-function loadProducts(){
+function loadDefaultCSV(){
  fetch("products.csv")
  .then(r=>r.text())
- .then(data=>{
-   const rows=data.trim().split("\n").slice(1);
-   P = rows.map((r,i)=>{
-     const [id,name,category,brand,price,discount,image]=r.split(",");
-     return {id,name,category,brand,price:Number(price),discount:Number(discount),image};
-   });
-   draw();
+ .then(data=>parseCSV(data));
+}
+
+function parseCSV(data){
+ const rows = data.trim().split("\n").slice(1);
+ P = rows.map((r,i)=>{
+   const [id,name,category,brand,price,discount,image] = r.split(",");
+   return {id,name,category,brand,price:Number(price),discount:Number(discount),image};
  });
+ draw();
 }
 
 function draw(){
@@ -116,47 +119,46 @@ function draw(){
 }
 
 function add(){
- if(!n.value || !pr.value) return alert("Missing fields");
+ if(!n.value||!pr.value) return alert("Missing fields");
  if(editIndex===null){
    const id = P.length ? Math.max(...P.map(p=>Number(p.id)))+1 : 1;
    P.push({id,name:n.value,category:c.value,brand:b.value,price:+pr.value,discount:+d.value||0,image:i.value});
  } else {
    P[editIndex]={...P[editIndex],name:n.value,category:c.value,brand:b.value,price:+pr.value,discount:+d.value||0,image:i.value};
  }
- draw();
- resetForm();
+ draw(); resetForm();
 }
 
 function edit(i){
- const x=P[i];
- n.value=x.name;c.value=x.category;b.value=x.brand;pr.value=x.price;d.value=x.discount;i.value=x.image;
+ const x=P[i]; n.value=x.name;c.value=x.category;b.value=x.brand;pr.value=x.price;d.value=x.discount;i.value=x.image;
  editIndex=i;formTitle.innerText="Edit Product";saveBtn.innerText="Update";cancelBtn.classList.remove("hidden");
 }
 
 function cancelEdit(){resetForm();}
-
-function resetForm(){
- n.value=b.value=pr.value=d.value=i.value="";
- c.value="computer";
- editIndex=null;
- formTitle.innerText="Add Product";
- saveBtn.innerText="Save Product";
- cancelBtn.classList.add("hidden");
-}
+function resetForm(){ n.value=b.value=pr.value=d.value=i.value=""; c.value="computer"; editIndex=null;
+formTitle.innerText="Add Product"; saveBtn.innerText="Save Product"; cancelBtn.classList.add("hidden");}
 
 function del(i){if(confirm("Delete product?")){P.splice(i,1);draw();}}
 
-/* ===== CSV DOWNLOAD ===== */
+/* ===== CSV EXPORT ===== */
 function downloadCSV(){
  if(!P.length){alert("No products to export"); return;}
  const header="id,name,category,brand,price,discount,image\n";
- const rows=P.map(p=>`${p.id},${p.name},${p.category},${p.brand},${p.price},${p.discount},${p.image}`).join("\n");
- const csvContent=header+rows;
- const blob=new Blob([csvContent],{type:"text/csv"});
- const a=document.createElement("a");
- a.href=URL.createObjectURL(blob);
- a.download="products.csv";
- a.click();
+ const rows = P.map(p=>`${p.id},${p.name},${p.category},${p.brand},${p.price},${p.discount},${p.image}`).join("\n");
+ const csvContent = header + rows;
+ const blob = new Blob([csvContent], {type:"text/csv"});
+ const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download="products.csv"; a.click();
+}
+
+/* ===== CSV UPLOAD ===== */
+function loadCSV(event){
+ const file = event.target.files[0];
+ if(!file) return;
+ const reader = new FileReader();
+ reader.onload = function(e){
+   parseCSV(e.target.result);
+ }
+ reader.readAsText(file);
 }
 </script>
 
