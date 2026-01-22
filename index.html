@@ -94,17 +94,29 @@ header{background:#0f172a;color:#fff;padding:1rem;text-align:center}
 
 <script>
 /* ===== CONFIG ===== */
-const WHATSAPP = "2347060402854"; // change if needed
+const WHATSAPP = "2347060402854"; // your number
 const DELIVERY = 2500;
 
 /* ===== DATA ===== */
-let products = JSON.parse(localStorage.getItem("products")) || [];
+let products = [];
 let cart = [];
 
-/* ===== RENDER PRODUCTS ===== */
+/* ===== LOAD PRODUCTS FROM CSV ===== */
+fetch('products.csv')
+.then(r=>r.text())
+.then(data=>{
+ const rows = data.trim().split("\n").slice(1);
+ products = rows.map(r=>{
+   const [id,name,category,brand,price,discount,image]=r.split(",");
+   return {id,name,category,brand,price:+price,discount:+discount,image};
+ });
+ render(products);
+});
+
+/* ===== RENDER ===== */
 function render(list){
  catalog.innerHTML="";
- if(!list.length){catalog.innerHTML="<p>No products available</p>";return;}
+ if(!list.length){catalog.innerHTML="<p>No products yet</p>";return;}
  list.forEach((p,i)=>{
   const price = p.discount || p.price;
   catalog.innerHTML+=`
@@ -118,9 +130,10 @@ function render(list){
  });
 }
 
+/* ===== FILTER ===== */
 function filterProducts(){
- const s=search.value.toLowerCase();
- const c=category.value;
+ const s = search.value.toLowerCase();
+ const c = category.value;
  render(products.filter(p=>p.name.toLowerCase().includes(s)&&(c==="all"||p.category===c)));
 }
 
@@ -128,8 +141,7 @@ function filterProducts(){
 function add(i){
  const p = products[i];
  const f = cart.find(x=>x.name===p.name);
- if(f) f.qty++;
- else cart.push({name:p.name,price:(p.discount||p.price),qty:1});
+ if(f) f.qty++; else cart.push({name:p.name,price:(p.discount||p.price),qty:1});
  cartCount.innerText = cart.length;
 }
 
@@ -138,8 +150,7 @@ function openCart(){
  let html="", total=0;
  cart.forEach((i,n)=>{
   total+=i.qty*i.price;
-  html+=`
-  <div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
+  html+=`<div style="border-bottom:1px solid #e5e7eb;padding:8px 0">
    <b>${i.name}</b><br>
    Qty: ${i.qty}
    <span style="float:right">₦${i.qty*i.price}</span>
@@ -176,9 +187,6 @@ function checkout(){
 
  cart=[];cartCount.innerText=0;closeCart();
 }
-
-/* INIT */
-render(products);
 </script>
 
 </body>
